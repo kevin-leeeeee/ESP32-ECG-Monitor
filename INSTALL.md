@@ -23,42 +23,70 @@
 
 ## 📱 2. 手機 App 端 (React Native / Expo)
 
-手機 App 原始碼位於 `mobile_app/` 目錄下，基於 **Expo** 框架開發。
+手機 App 原始碼位於 `mobile_app/` 目錄下，基於 **Expo** 框架與原生藍牙庫 `react-native-ble-plx` 開發。
 
-### 環境需求
-* 安裝 [Node.js](https://nodejs.org/) (建議 LTS 版本)。
-* 手機端下載安裝 **Expo Go** App：
-  * **Android**：請在 Google Play 商店搜尋 「Expo Go」 下載。
-  * **iOS**：請在 App Store 搜尋 「Expo Go」 下載。
+### 🚨 藍牙功能運作原理與 Expo Go 限制 (極重要！)
+* **標準 Expo Go 限制**：由於原生藍牙模組需要特定的硬體驅動權限，官方標準的 **Expo Go** App **並不內建原生藍牙套件**。若您直接在標準 Expo Go 中啟動專案，App 將會因找不到藍牙驅動而**崩潰或無法搜尋裝置**。
+* **解決方案**：您必須透過 **Expo 官方網站的雲端編譯服務 (EAS Build)**，編譯一個專屬於您本專案的「客製化開發版 App (Development Build)」。
 
-### 安裝步驟
-1. 開啟終端機（PowerShell 或 CMD），進入 `mobile_app` 目錄：
+---
+
+### 第一步：環境準備
+1. 安裝 [Node.js](https://nodejs.org/) (建議 LTS 版本)。
+2. 在 `mobile_app` 目錄下安裝 Node.js 依賴套件：
    ```bash
    cd mobile_app
-   ```
-2. 安裝所有 Node.js 依賴套件：
-   ```bash
    npm install
    ```
 
-### 執行步驟
-1. 在 `mobile_app` 目錄下啟動 Expo 開發伺服器：
-   ```bash
-   npx expo start
-   ```
-2. 控制台會生成一個大 **QR Code**。
-3. **手機運行方式**：
-   * **Android**：開啟手機上的 **Expo Go** App，點擊 "Scan QR code" 並掃描電腦螢幕上的 QR Code。
-   * **iOS**：直接開啟手機內建的 **相機 App** 掃描 QR Code，然後點擊彈出的「在 Expo Go 中開啟」連結。
-4. 開發伺服器會將 App 編譯並推送到您的手機上運作。
+---
 
-### 🚨 藍牙設定與權限重要說明
-為了能讓 App 透過藍牙成功搜尋並連線 ESP32 裝置，**請務必在手機端完成以下設定**：
-1. **啟用藍牙**：確保手機藍牙已開啟。
-2. **啟用定位服務 (Location / GPS)**：Android 系統要求藍牙掃描必須啟用定位權限與定位服務。
-3. **允許 App 權限**：
-   * 當 Expo Go 提示存取「藍牙」或「位置資訊」權限時，**請務必選擇「允許」或「在使用應用程式期間允許」**。
-   * 若連線失敗，請至手機的 `設定 ➡️ 應用程式 ➡️ Expo Go ➡️ 權限` 中，確認「藍牙/周邊裝置」與「位置」權限皆已手動啟用。
+### 第二步：使用 Expo 官網雲端編譯客製化 App (EAS Build)
+這會將原生的藍牙驅動代碼編譯進您的安裝包中，並生成安裝於手機的客製化 App：
+
+1. **註冊 Expo 帳號**：至 [Expo 官方網站 (expo.dev)](https://expo.dev/) 免費註冊一個開發者帳號。
+2. **安裝 EAS 終端機工具**：在電腦的終端機執行命令安裝：
+   ```bash
+   npm install -g eas-cli
+   ```
+3. **登入您的帳號**：在終端機中執行並輸入您的帳號密碼登入：
+   ```bash
+   eas login
+   ```
+4. **初始化專案關聯**：
+   ```bash
+   eas project:init
+   ```
+5. **啟動雲端編譯 (以 Android APK 為例)**：
+   執行以下命令，指示 Expo 官網伺服器在雲端為您編譯 Android 開發版安裝包 (APK)：
+   ```bash
+   eas build --platform android --profile development
+   ```
+   * *編譯過程中，系統會提示您生成 Android 憑證，請一路輸入 `Yes` 或直接按 Enter 同意。*
+   * *Expo 雲端伺服器會將您的專案代碼與原生藍牙套件進行打包編譯。*
+6. **下載與安裝客製化 App**：
+   * 編譯完成後（通常需要 3~5 分鐘），終端機會印出下載連結以及一個 **QR Code**。
+   * 使用手機掃描該 QR Code 下載產生的 **`.apk` 檔案** 並安裝到手機上。
+   * 此時手機上會多出一個名稱為您專案名稱的客製化 App（它內部已打包了藍牙原生驅動）。
+
+---
+
+### 第三步：本地開發伺服器連線與執行
+1. 在電腦終端機啟動支援開發端的 Expo 伺服器 (注意加上 `--dev-client` 參數)：
+   ```bash
+   npx expo start --dev-client
+   ```
+2. 開啟手機上剛才安裝好的 **客製化 App** (而非官方標準 Expo Go)。
+3. 使用該 App 內建的掃描器，掃描電腦終端機出現的 QR Code。
+4. App 便會順利載入本地代碼，此時即可正常使用藍牙 BLE 連線和 Leads-off 檢測功能！
+
+---
+
+### 🚨 藍牙設定與手機端權限
+在客製化 App 啟動後，請確保手機完成了以下設定以保證搜尋正常：
+1. **開啟手機藍牙與定位 (GPS) 服務**。
+2. 系統彈出提示時，**必須允許 App 使用「藍牙/周邊裝置掃描」與「精確位置資訊」權限**（Android 系統限制藍牙掃描必須配合定位權限）。
+3. 若連線異常，請手動前往手機的 `設定 ➡️ 應用程式管理 ➡️ 您的 App ➡️ 權限` 中，確認「藍牙」與「位置」皆已開啟。
 
 ---
 
