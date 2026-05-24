@@ -59,8 +59,8 @@ $$y(n) = \frac{1}{N} \sum_{i=0}^{N-1} x(n-i)$$
 #### Step E: 自適應雙閾值與回溯搜尋 (Back-Search)
 1. 演算法維護兩個動態閾值：`Signal_Threshold`（心跳能量）與 `Noise_Threshold`（背景雜訊）。
 2. 若波峰能量大於 `Signal_Threshold`，則判定為 R 波，並更新閾值：
-   $$\text{Signal\_Threshold} = 0.125 \cdot \text{Peak\_Val} + 0.875 \cdot \text{Signal\_Threshold}$$
-3. **回溯搜尋 (Back-Search)**：如果超過 1.66 秒（相當於心率低於 36 BPM）沒有偵測到 R 波，演算法會啟用次級閾值（即 `0.5 * Signal_Threshold`）在此區間回溯搜尋最大值，有效防止接觸不良時漏判。
+   $$\text{Threshold}_{\text{signal}} = 0.125 \cdot \text{Peak}_{\text{val}} + 0.875 \cdot \text{Threshold}_{\text{signal}}$$
+3. **回溯搜尋 (Back-Search)**：如果超過 1.66 秒（相當於心率低於 36 BPM）沒有偵測到 R 波，演算法會啟用次級閾值（即 `0.5 * Threshold_signal`）在此區間回溯搜尋最大值，有效防止接觸不良時漏判。
 
 ---
 
