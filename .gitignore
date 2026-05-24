@@ -1,0 +1,23 @@
+# PlatformIO
+.pio
+.vscode/.browse.c_cpp.db*
+.vscode/c_cpp_properties.json
+.vscode/launch.json
+.vscode/ipch
+
+# Node / Expo
+node_modules/
+mobile_app/node_modules/
+mobile_app/.expo/
+mobile_app/.claude/
+
+# Scratch / 暫存
+scratch/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db

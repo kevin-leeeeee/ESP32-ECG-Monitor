@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🩺 自律神經與心電行動檢測系統</title>
+    <!-- 引入 Google Fonts Outfit 與 Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-green: #10b981;
+            --accent-green-glow: rgba(16, 185, 129, 0.3);
+            --accent-blue: #3b82f6;
+            --accent-blue-glow: rgba(59, 130, 246, 0.3);
+            --accent-red: #ef4444;
+            --accent-red-glow: rgba(239, 68, 68, 0.3);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            padding: 16px;
+        }
+
+        /* 頂部狀態列 */
+        header {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 0 8px;
+        }
+
+        .app-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--card-border);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-red);
+            box-shadow: 0 0 8px var(--accent-red);
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+        }
+
+        /* 主容器 */
+        main {
+            width: 100%;
+            max-width: 500px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 玻璃擬態卡片基礎樣式 */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 22px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        /* 1. 準備狀態面板 */
+        #panel-ready {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+            gap: 24px;
+        }
+
+        .heart-icon-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .heart-pulse-bg {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--accent-red-glow);
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+
+        .heart-icon {
+            font-size: 3.5rem;
+            animation: heart-beat 1.2s infinite ease-in-out;
+            z-index: 1;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.85); opacity: 0.5; }
+            50% { transform: scale(1.3); opacity: 0; }
+            100% { transform: scale(0.85); opacity: 0; }
+        }
+
+        @keyframes heart-beat {
+            0% { transform: scale(1); }
+            15% { transform: scale(1.18); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.15); }
+            60% { transform: scale(1); }
+            100% { transform: scale(1); }
+        }
+
+        .ready-text h2 {
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .ready-text p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .btn-action {
+            width: 100%;
+            max-width: 280px;
+            padding: 16px 24px;
+            border-radius: 999px;
+            border: none;
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: white;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+        }
+
+        .btn-green {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 4px 20px var(--accent-green-glow);
+        }
+
+        .btn-green:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 10px var(--accent-green-glow);
+        }
+
+        .btn-disabled {
+            background: #475569 !important;
+            box-shadow: none !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* 2. 量測中面板 */
+        #panel-measuring {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ECG 畫布 */
+        .chart-container {
+            width: 100%;
+            height: 180px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #ecg-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .live-tag {
+            position: absolute;
+            top: 10px;
+            left: 12px;
+            background: var(--accent-red);
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* 進度與計時器區塊 */
+        .measurement-vitals {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 10px 0;
+        }
+
+        /* 圓形倒數計時器 */
+        .timer-circle-wrapper {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-circle-svg {
+            transform: rotate(-90deg);
+            width: 100%;
+            height: 100%;
+        }
+
+        .timer-circle-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.05);
+            stroke-width: 8;
+        }
+
+        .timer-circle-progress {
+            fill: none;
+            stroke: var(--accent-green);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 283;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.1s linear;
+        }
+
+        .timer-text-container {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-seconds {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .timer-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            margin-top: -2px;
+        }
+
+        /* 心率大卡片 */
+        .live-hr-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .live-hr-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            display: flex;
+            align-items: baseline;
+            gap: 2px;
+        }
+
+        .live-hr-value span {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .live-hr-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* 3. 結果面板 */
+        #panel-result {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 基礎生理指標列 */
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .vital-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .vital-box-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .vital-box-value {
+            font-size: 1.35rem;
+            font-weight: 800;
+        }
+
+        .vital-box-value span {
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-left: 2px;
+        }
+
+        /* 活力條 */
+        .metric-container {
+            margin-bottom: 16px;
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        .metric-title {
+            font-weight: 600;
+        }
+
+        .metric-score {
+            font-weight: 800;
+            font-size: 1.1rem;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 99px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 99px;
+            transition: width 1s cubic-bezier(0.1, 0.8, 0.1, 1);
+        }
+
+        /* 雙向平衡拉扯條 */
+        .balance-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .balance-sns-text { color: var(--accent-red); }
+        .balance-pns-text { color: var(--accent-blue); }
+
+        .balance-bar-wrapper {
+            position: relative;
+            width: 100%;
+            height: 16px;
+            border-radius: 99px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .balance-sns-fill {
+            height: 100%;
+            background-color: var(--accent-red);
+            transition: width 1s cubic-bezier(0.1, 0.8, 0.1, 1);
+        }
+
+        .balance-pns-fill {
+            height: 100%;
+            background-color: var(--accent-blue);
+            transition: width 1s cubic-bezier(0.1, 0.8, 0.1, 1);
+            flex: 1;
+        }
+
+        .balance-center-line {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 3px;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        .balance-subtitle {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        /* 綜合健康成因建議卡片 */
+        .diagnosis-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .diag-status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 10px;
+        }
+
+        .diag-status-title {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .diag-status-value {
+            font-size: 1.15rem;
+            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: 6px;
+        }
+
+        .diag-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .diag-block-title {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: bold;
+        }
+
+        .diag-block-content {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+
+        /* 頁尾資訊 */
+        footer {
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 10px;
+            padding-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 頂部狀態列 -->
+    <header>
+        <div class="app-title">🩺 ECG & HRV Monitor</div>
+        <div class="status-badge">
+            <div id="connection-dot" class="status-dot"></div>
+            <span id="connection-text">未連線</span>
+        </div>
+    </header>
+
+    <!-- 主容器 -->
+    <main>
+        
+        <!-- 1. 準備狀態面板 -->
+        <section id="panel-ready" class="glass-card">
+            <div class="heart-icon-wrapper">
+                <div class="heart-pulse-bg"></div>
+                <div class="heart-icon">💓</div>
+            </div>
+            <div class="ready-text">
+                <h2>生理狀態量測</h2>
+                <p>請確認您的 ECG 電極感測片已貼妥貼片或穿戴式胸帶，隨後點選下方按鈕開始量測。</p>
+            </div>
+            <button id="btn-start" class="btn-action btn-green">開始量測 (Start)</button>
+        </section>
+
+        <!-- 2. 量測中面板 -->
+        <section id="panel-measuring" class="glass-card">
+            <!-- 即時心電圖 -->
+            <div class="chart-container">
+                <div class="live-tag">LIVE</div>
+                <canvas id="ecg-canvas"></canvas>
+            </div>
+
+            <!-- 計時器與心率 -->
+            <div class="measurement-vitals">
+                <!-- 圓形倒數 -->
+                <div class="timer-circle-wrapper">
+                    <svg class="timer-circle-svg">
+                        <circle class="timer-circle-bg" cx="55" cy="55" r="45"></circle>
+                        <circle id="timer-progress" class="timer-circle-progress" cx="55" cy="55" r="45"></circle>
+                    </svg>
+                    <div class="timer-text-container">
+                        <div id="timer-sec" class="timer-seconds">--</div>
+                        <div class="timer-label">倒數秒數</div>
+                    </div>
+                </div>
+
+                <!-- 即時心率 -->
+                <div class="live-hr-card">
+                    <div id="live-hr" class="live-hr-value">-- <span>BPM</span></div>
+                    <div class="live-hr-label">即時心率</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 結果面板 -->
+        <section id="panel-result" class="glass-card">
+            <!-- 頂部標題與按鈕 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <div class="section-title">📊 自律神經平衡分析報告</div>
+                <button id="btn-restart" class="btn-action btn-green" style="width: auto; padding: 6px 16px; font-size: 0.8rem; border-radius: 8px; margin: 0;">重新量測</button>
+            </div>
+
+            <!-- 基本生理指標 -->
+            <div class="vitals-grid">
+                <div class="vital-box">
+                    <div class="vital-box-label">平均心率</div>
+                    <div id="res-hr" class="vital-box-value">--<span>BPM</span></div>
+                </div>
+                <div class="vital-box">
+                    <div class="vital-box-label">平均呼吸率</div>
+                    <div id="res-rsp" class="vital-box-value">--<span>次/分</span></div>
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 5px 0;">
+
+            <!-- 神經活力度 (SDNN) -->
+            <div class="metric-container">
+                <div class="metric-header">
+                    <span class="metric-title">🧠 神經活力總分 (Vitality)</span>
+                    <span id="res-vitality" class="metric-score">0 / 100</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div id="vitality-bar" class="progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <!-- 自律神經平衡比例 (交感 vs 副交感) -->
+            <div class="metric-container">
+                <div class="metric-header">
+                    <span class="metric-title">⚖️ 自律神經平衡度 (SNS vs PNS)</span>
+                </div>
+                <div class="balance-label-row">
+                    <span id="res-sns-lbl" class="balance-sns-text">交感(油門) --%</span>
+                    <span id="res-pns-lbl" class="balance-pns-text">副交感(煞車) --%</span>
+                </div>
+                <div class="balance-bar-wrapper">
+                    <div id="sns-bar" class="balance-sns-fill" style="width: 50%;"></div>
+                    <div id="pns-bar" class="balance-pns-fill"></div>
+                    <div class="balance-center-line"></div>
+                </div>
+                <div id="res-balance-desc" class="balance-subtitle">計算中...</div>
+            </div>
+
+            <!-- 綜合身心健康診斷與成因 -->
+            <div class="diagnosis-card">
+                <div class="diag-status-row">
+                    <span class="diag-status-title">整體健康狀態</span>
+                    <span id="res-state" class="diag-status-value" style="background: rgba(255, 255, 255, 0.1);">分析中</span>
+                </div>
+                <div class="diag-block">
+                    <span class="diag-block-title">狀態成因：</span>
+                    <span id="res-cause" class="diag-block-content">請等候量測結果分析。</span>
+                </div>
+                <div class="diag-block">
+                    <span class="diag-block-title">專家建議：</span>
+                    <span id="res-rec" class="diag-block-content">無。</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 頁尾 -->
+    <footer>
+        <div>自律神經與心電行動檢測系統 &copy; 2026</div>
+        <div id="connection-info" style="margin-top: 4px;">等待伺服器連線...</div>
+    </footer>
+
+    <!-- 前端互動與 WebSockets 腳本 -->
+    <script>
+        // DOM 元件
+        const connectionDot = document.getElementById('connection-dot');
+        const connectionText = document.getElementById('connection-text');
+        const connectionInfo = document.getElementById('connection-info');
+        
+        const panelReady = document.getElementById('panel-ready');
+        const panelMeasuring = document.getElementById('panel-measuring');
+        const panelResult = document.getElementById('panel-result');
+        
+        const btnStart = document.getElementById('btn-start');
+        const btnRestart = document.getElementById('btn-restart');
+        
+        const canvas = document.getElementById('ecg-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        const timerSec = document.getElementById('timer-sec');
+        const timerProgress = document.getElementById('timer-progress');
+        const liveHr = document.getElementById('live-hr');
+        
+        const resHr = document.getElementById('res-hr');
+        const resRsp = document.getElementById('res-rsp');
+        const resVitality = document.getElementById('res-vitality');
+        const vitalityBar = document.getElementById('vitality-bar');
+        
+        const resSnsLbl = document.getElementById('res-sns-lbl');
+        const resPnsLbl = document.getElementById('res-pns-lbl');
+        const snsBar = document.getElementById('sns-bar');
+        const resBalanceDesc = document.getElementById('res-balance-desc');
+        
+        const resState = document.getElementById('res-state');
+        const resCause = document.getElementById('res-cause');
+        const resRec = document.getElementById('res-rec');
+
+        // 全域變數
+        let ws;
+        const totalCircleLength = 283; // 2 * PI * r (r=45)
+        let ecgData = [];
+        const maxPoints = 300; // 螢幕最多容納的點數
+        let animationFrameId;
+        let isMeasuring = false;
+        let originalDuration = 30; // 預設 30 秒
+
+        // 初始化 Canvas 尺寸
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth * window.devicePixelRatio;
+            canvas.height = canvas.parentElement.clientHeight * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // 連接 WebSocket
+        function connectWS() {
+            const host = window.location.hostname || 'localhost';
+            const wsPort = 8765;
+            ws = new WebSocket(`ws://${host}:${wsPort}`);
+
+            ws.onopen = () => {
+                connectionDot.classList.add('connected');
+                connectionText.textContent = '已連線';
+                connectionInfo.textContent = `已成功連接至 Python 伺服器 (${host}:${wsPort})`;
+                btnStart.classList.remove('btn-disabled');
+                btnStart.disabled = false;
+            };
+
+            ws.onclose = () => {
+                connectionDot.classList.remove('connected');
+                connectionText.textContent = '未連線';
+                connectionInfo.textContent = '連線中斷，正在嘗試重新連線...';
+                btnStart.classList.add('btn-disabled');
+                btnStart.disabled = true;
+                setTimeout(connectWS, 2000);
+            };
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                
+                if (msg.type === 'state') {
+                    handleStateChange(msg);
+                } else if (msg.type === 'ecg') {
+                    pushECGData(msg.data);
+                } else if (msg.type === 'result') {
+                    showResult(msg);
+                }
+            };
+        }
+
+        // 處理狀態切換
+        function handleStateChange(msg) {
+            originalDuration = msg.total_duration || originalDuration;
+            
+            if (msg.state === 'READY') {
+                isMeasuring = false;
+                panelReady.style.display = 'flex';
+                panelMeasuring.style.display = 'none';
+                panelResult.style.display = 'none';
+                ecgData = [];
+            } else if (msg.state === 'MEASURING') {
+                isMeasuring = true;
+                panelReady.style.display = 'none';
+                panelMeasuring.style.display = 'flex';
+                panelResult.style.display = 'none';
+                
+                // 更新秒數與進度圈
+                timerSec.textContent = msg.time_left;
+                const offset = (msg.time_left / originalDuration) * totalCircleLength;
+                timerProgress.style.strokeDashoffset = totalCircleLength - offset;
+                
+                // 更新即時心率
+                if (msg.hr && msg.hr !== "計算中" && msg.hr !== "收集資料中") {
+                    liveHr.innerHTML = `${msg.hr} <span>BPM</span>`;
+                } else {
+                    liveHr.innerHTML = `<span style="font-size:1.3rem">${msg.hr || '計算中'}</span>`;
+                }
+            }
+        }
+
+        // 推入 ECG 資料
+        function pushECGData(newData) {
+            if (!isMeasuring) return;
+            
+            // newData 可以是單個數值或數值陣列
+            if (Array.isArray(newData)) {
+                newData.forEach(val => {
+                    ecgData.push(val);
+                    if (ecgData.length > maxPoints) {
+                        ecgData.shift();
+                    }
+                });
+            } else {
+                ecgData.push(newData);
+                if (ecgData.length > maxPoints) {
+                    ecgData.shift();
+                }
+            }
+        }
+
+        // 繪製心電圖
+        function drawECG() {
+            if (!isMeasuring) {
+                requestAnimationFrame(drawECG);
+                return;
+            }
+
+            const w = canvas.width / window.devicePixelRatio;
+            const h = canvas.height / window.devicePixelRatio;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            // 繪製背景網格
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            const gridSize = 20;
+            for (let x = 0; x < w; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+                ctx.stroke();
+            }
+            for (let y = 0; y < h; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            if (ecgData.length > 1) {
+                // 自動縮放數值範圍 (配合 0-4095 解析度)
+                let maxVal = Math.max(...ecgData);
+                let minVal = Math.min(...ecgData);
+                let range = maxVal - minVal;
+                if (range < 100) range = 100; // 防止分母為 0
+
+                ctx.strokeStyle = '#ef4444'; // 霓虹紅
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                
+                // 加入霓虹發光效果 (在行動端有性能開銷，但可以藉由 shadowBlur 達成 premium 質感)
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = 'rgba(239, 68, 68, 0.8)';
+                
+                ctx.beginPath();
+                
+                const step = w / (maxPoints - 1);
+                
+                ecgData.forEach((val, idx) => {
+                    // 對齊到高度中心
+                    const normalized = (val - minVal) / range;
+                    const x = idx * step;
+                    const y = h - 20 - normalized * (h - 40); // 留邊距 20px
+                    
+                    if (idx === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                
+                ctx.stroke();
+                
+                // 關閉陰影，避免影響其他元件
+                ctx.shadowBlur = 0;
+            }
+
+            requestAnimationFrame(drawECG);
+        }
+
+        // 呈現最終結果
+        function showResult(msg) {
+            isMeasuring = false;
+            panelReady.style.display = 'none';
+            panelMeasuring.style.display = 'none';
+            panelResult.style.display = 'flex';
+            
+            // 填寫數據
+            resHr.innerHTML = `${msg.hr} <span>BPM</span>`;
+            resRsp.innerHTML = `${msg.rsp} <span>次/分</span>`;
+            resVitality.textContent = `${msg.vitality} / 100`;
+            
+            // 神經活力進度條與變色
+            vitalityBar.style.width = `${msg.vitality}%`;
+            if (msg.vitality >= 70) {
+                vitalityBar.style.background = 'linear-gradient(to right, #10b981, #34d399)'; // 綠
+            } else if (msg.vitality >= 40) {
+                vitalityBar.style.background = 'linear-gradient(to right, #f59e0b, #fbbf24)'; // 黃
+            } else {
+                vitalityBar.style.background = 'linear-gradient(to right, #ef4444, #f87171)'; // 紅
+            }
+
+            // 自律神經平衡
+            resSnsLbl.textContent = `交感(油門) ${msg.sns}%`;
+            resPnsLbl.textContent = `副交感(煞車) ${msg.pns}%`;
+            snsBar.style.width = `${msg.sns}%`;
+            resBalanceDesc.textContent = msg.balance_desc;
+
+            // 綜合狀態成因
+            resState.textContent = msg.state;
+            resCause.textContent = msg.cause;
+            resRec.textContent = msg.recommendation;
+
+            // 狀態卡片變色
+            if (msg.state.includes("健康") || msg.state.includes("正常") || msg.state.includes("放鬆")) {
+                resState.style.background = 'rgba(16, 185, 129, 0.2)';
+                resState.style.color = '#34d399';
+                resState.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+            } else if (msg.state.includes("輕微") || msg.state.includes("偏差")) {
+                resState.style.background = 'rgba(245, 158, 11, 0.2)';
+                resState.style.color = '#fbbf24';
+                resState.style.border = '1px solid rgba(245, 158, 11, 0.4)';
+            } else {
+                resState.style.background = 'rgba(239, 68, 68, 0.2)';
+                resState.style.color = '#f87171';
+                resState.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+            }
+        }
+
+        // 綁定按鈕事件
+        btnStart.addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'command', cmd: 'START' }));
+            }
+        });
+
+        btnRestart.addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'command', cmd: 'RESTART' }));
+            }
+        });
+
+        // 啟動流程
+        connectWS();
+        drawECG();
+    </script>
+</body>
+</html>
