@@ -980,7 +980,28 @@ class ECGRealTimePlotter:
             else:
                 try:
                     self.ser = serial.Serial(port, baud_rate, timeout=1)
-                    print(f"成功連接到 {port}！")
+                    print(f"嘗試開啟串口 {port}...")
+                    
+                    # 進行數據確認檢測：嘗試讀取數據，確認有無有效資料流入
+                    has_data = False
+                    start_detect = time.time()
+                    while time.time() - start_detect < 1.5:  # 檢測 1.5 秒
+                        if self.ser.in_waiting > 0:
+                            line = self.ser.readline().decode('utf-8', errors='ignore').strip()
+                            if line:  # 讀到了非空字串 (可能是數字或 !LEADS_OFF!)
+                                has_data = True
+                                break
+                        time.sleep(0.05)
+                        
+                    if not has_data:
+                        print(f"⚠️ [連線失敗] 雖然成功開啟了 {port}，但未檢測到來自 ESP32 的數據流入。")
+                        print("   請確認：")
+                        print("   1. ESP32 晶片已接妥並開機。")
+                        print("   2. 該 COM Port 沒有被其他程式（如 Arduino IDE）佔用。")
+                        self.ser.close()
+                        exit()
+                        
+                    print(f"成功連接到 {port}，且已檢測到有效的數據流！")
                 except Exception as e:
                     print(f"無法連接到 {port}，錯誤：{e}")
                     exit()
@@ -1224,27 +1245,31 @@ class ECGRealTimePlotter:
                                 self.leads_off_active = False
                                 print(f"[Debug] [藍牙] 導聯脫落狀態改變為: {self.leads_off_active}")
             else:
-                while self.ser.in_waiting > 0:
-                    try:
-                        line = self.ser.readline().decode('utf-8', errors='ignore').strip()
-                        if line == "!LEADS_OFF!":
-                            new_samples.append(0) 
-                            if not self.leads_off_active:
-                                self.leads_off_active = True
-                                print(f"[Debug] 導聯脫落狀態改變為: {self.leads_off_active}")
-                            self.consecutive_digits = 0
-                        elif line.isdigit():
-                            new_samples.append(int(line))
-                            self.consecutive_digits += 1
-                            if self.consecutive_digits >= 50:  # 連續 50 個正常點 (約 0.2 秒) 才解除警報
-                                if self.leads_off_active:
-                                    self.leads_off_active = False
+                try:
+                    while self.ser.in_waiting > 0:
+                        try:
+                            line = self.ser.readline().decode('utf-8', errors='ignore').strip()
+                            if line == "!LEADS_OFF!":
+                                new_samples.append(0) 
+                                if not self.leads_off_active:
+                                    self.leads_off_active = True
                                     print(f"[Debug] 導聯脫落狀態改變為: {self.leads_off_active}")
-                        elif line:
-                            print(f"[Debug] 接收到非預期串口數據: {line}")
-                    except Exception as e:
-                        print(f"[Debug] 讀取串口異常: {e}")
-                        pass
+                                self.consecutive_digits = 0
+                            elif line.isdigit():
+                                new_samples.append(int(line))
+                                self.consecutive_digits += 1
+                                if self.consecutive_digits >= 50:  # 連續 50 個正常點 (約 0.2 秒) 才解除警報
+                                    if self.leads_off_active:
+                                        self.leads_off_active = False
+                                        print(f"[Debug] 導聯脫落狀態改變為: {self.leads_off_active}")
+                            elif line:
+                                print(f"[Debug] 接收到非預期串口數據: {line}")
+                        except Exception as e:
+                            print(f"[Debug] 讀取單行數據異常: {e}")
+                            pass
+                except Exception as e:
+                    print(f"⚠️ [串口異常] USB 連線已斷開或丟失：{e}")
+                    pass
 
         # 餵入繪圖緩衝區
         for sample in new_samples:
