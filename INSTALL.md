@@ -91,59 +91,11 @@
 
 ---
 
----
-
 ### 🚨 藍牙設定與手機端權限
 在客製化 App 啟動後，請確保手機完成了以下設定以保證搜尋正常：
 1. **開啟手機藍牙與定位 (GPS) 服務**。
 2. 系統彈出提示時，**必須允許 App 使用「藍牙/周邊裝置掃描」與「精確位置資訊」權限**（Android 系統限制藍牙掃描必須配合定位權限）。
 3. 若連線異常，請手動前往手機的 `設定 ➡️ 應用程式管理 ➡️ 您的 App ➡️ 權限` 中，確認「藍牙」與「位置」皆已開啟。
-
----
-
-### 📦 第四步：打包獨立運行測試版與商店正式版 App
-當您的程式碼修改完成且功能穩定後，您可以將其打包成不依賴本地電腦開發伺服器、可獨立在手機上運作並分發給他人的正式 App：
-
-#### 1. 打包 Android 獨立測試版 APK (無須開發伺服器，直接安裝運行)
-如果您想把 App 產生一個獨立安裝檔分享給朋友，或自己出門單獨使用，這是最便利的方案：
-在 `mobile_app` 目錄下執行：
-```bash
-eas build --platform android --profile preview
-```
-* *此指令會在 Expo 雲端伺服器進行 Production 優化編譯，並產出一個獨立的 `.apk` 安裝檔。下載到手機安裝後即可直接連線藍牙進行測量，所有歷史紀錄會儲存在手機本地資料庫。*
-
-#### 2. 打包正式商店發布版 (用於上架審核)
-* **Android 商店發布版 (.aab)**：
-  ```bash
-  eas build --platform android --profile production
-  ```
-  *(編譯完成後，可配合 `eas submit --platform android` 直接發布提交至 Google Play)*
-* **iOS App Store 發布版 (.ipa)**：
-  ```bash
-  eas build --platform ios --profile production
-  ```
----
-
-### 💡 如何自訂 App 圖示與啟動畫面 (Splash Screen)
-若您需要客製化 App 在手機桌面顯示的圖示，或啟動時的封面載入畫面，可以替換以下檔案並重新打包：
-
-1. **更換 App 桌面圖示 (Icon)**：
-   - 準備一張 1024x1024 像素的 PNG 圖片，命名為 `icon.png`，替換掉 `mobile_app/assets/icon.png`。
-   - **Android 適應性圖示 (Adaptive Icon)**：
-     - 前景圖 (透明背景的主題圖案)：準備一張 512x512 PNG，命名並替換 `mobile_app/assets/android-icon-foreground.png`。
-     - 背景圖：替換 `mobile_app/assets/android-icon-background.png`；或者在 `app.json` 的 `android.adaptiveIcon.backgroundColor` 修改為自訂顏色十六進位值。
-2. **更換啟動載入畫面 (Splash Screen)**：
-   - 準備一張封面圖片（建議為 1242x2436 像素的 PNG），命名為 `splash.png` 放進 `mobile_app/assets/`。
-   - 在 `mobile_app/app.json` 的 `"expo"` 節點下新增 `splash` 欄位配置：
-     ```json
-     "splash": {
-       "image": "./assets/splash.png",
-       "resizeMode": "contain",
-       "backgroundColor": "#E6F4FE"
-     }
-     ```
-3. **重新打包生效**：
-   - 替換圖片後，請重新執行 EAS Build 打包命令（如 `eas build ...`），下載安裝新的安裝包，新的圖示與啟動封面即會生效。
 
 ---
 
