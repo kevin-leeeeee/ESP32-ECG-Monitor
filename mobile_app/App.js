@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Platform, PermissionsAndroid, ActivityIndicator, Modal, FlatList, Alert, TextInput } from 'react-native';
 import { BleManager } from 'react-native-ble-plx';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Buffer } from 'buffer'; // Base64 解碼
 import Svg, { Polyline, Line, Rect } from 'react-native-svg';
 import { EcgAnalyzer } from './src/utils/ecgAnalyzer';
@@ -106,11 +106,11 @@ export default function App() {
         time: timestamp,
         result: newResult
       };
-      setHistoryList(prevList => {
-        const updatedList = [record, ...prevList];
-        FileSystem.writeAsStringAsync(HISTORY_FILE, JSON.stringify(updatedList)).catch(e => console.log(e));
-        return updatedList;
-      });
+      
+      const updatedList = [record, ...historyList];
+      setHistoryList(updatedList);
+      await FileSystem.writeAsStringAsync(HISTORY_FILE, JSON.stringify(updatedList));
+      console.log("歷史紀錄與檔案已成功寫入:", HISTORY_FILE);
     } catch (e) {
       console.log("儲存歷史紀錄失敗", e);
     }
@@ -341,39 +341,44 @@ export default function App() {
     let nextBeatIndex = 40;
     let currentInterval = 200; // 預設 800ms (75 BPM)
 
-    // 模擬 250Hz 的數據流
+    // 每 100ms 產生 25 個點，保證總數據量精確度與執行效率
     const dataTimerId = setInterval(() => {
-      let val = 2000; // 基線
+      const pointsToGenerate = 25;
+      
+      for (let p = 0; p < pointsToGenerate; p++) {
+        let val = 2000; // 基線
+        const offset = simIndex - (nextBeatIndex - 40);
 
-      const offset = simIndex - (nextBeatIndex - 40);
+        if (offset >= 0 && offset < 50) {
+          // 合成 QRS-T 波形
+          if (offset === 0) val = 1800; // Q
+          else if (offset === 5) val = 3800; // R
+          else if (offset === 10) val = 1400; // S
+          else if (offset === 25) val = 2300; // T
+          else val = 2000;
+        } else {
+          // 微小背景雜訊
+          val += Math.sin(simIndex * 0.1) * 30 + (Math.random() - 0.5) * 20;
+        }
 
-      if (offset >= 0 && offset < 50) {
-        // 合成 QRS-T 波形
-        if (offset === 0) val = 1800; // Q
-        else if (offset === 5) val = 3800; // R
-        else if (offset === 10) val = 1400; // S
-        else if (offset === 25) val = 2300; // T
-        else val = 2000;
-      } else {
-        // 微小背景雜訊
-        val += Math.sin(simIndex * 0.1) * 30 + (Math.random() - 0.5) * 20;
+        dataBuffer.current.push(val);
+        displayBuffer.current.push(val);
+        
+        simIndex++;
+
+        // 當到達下一個心跳特徵點時，隨機產生 R-R 間期變異 (180 ~ 230 個點，約 72 ~ 83 BPM)
+        if (simIndex >= nextBeatIndex) {
+          currentInterval = 180 + Math.floor(Math.random() * 50);
+          nextBeatIndex = simIndex + currentInterval;
+        }
       }
-
-      dataBuffer.current.push(val);
-      displayBuffer.current.push(val);
+      
+      // 限制滾動顯示的數據長度 (只保留最新的 800 個點)
       if (displayBuffer.current.length > 800) {
         displayBuffer.current = displayBuffer.current.slice(-800);
       }
       updateEcgPath();
-
-      simIndex++;
-
-      // 當到達下一個心跳特徵點時，隨機產生 R-R 間期變異 (180 ~ 230 個點，約 72 ~ 83 BPM)
-      if (simIndex >= nextBeatIndex) {
-        currentInterval = 180 + Math.floor(Math.random() * 50);
-        nextBeatIndex = simIndex + currentInterval;
-      }
-    }, 1000 / 250);
+    }, 100);
   };
 
   const finishMeasurement = () => {

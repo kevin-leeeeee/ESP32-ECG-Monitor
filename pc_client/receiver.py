@@ -39,7 +39,7 @@ BAUD_RATE = 115200
 SAMPLE_RATE = 250 
 
 # 設定量測總時間 (例如 120 秒 = 2 分鐘)
-MEASUREMENT_DURATION = 180
+MEASUREMENT_DURATION = 120
 
 # 畫面上只顯示最近 4 秒的波形
 PLOT_WINDOW_POINTS = SAMPLE_RATE * 4
@@ -448,15 +448,15 @@ def show_history_manager_window():
         # 建議
         recommendation = "保持規律作息，您的自律神經調節狀況非常良好！"
         state_color = "#27AE60" # 綠色
-        if sdnn < 35:
+        if sdnn < 20:
+            state_color = "#C0392B" # 深紅
+            recommendation = "警訊！您的自律神經活性偏低，請務必獲得充足睡眠並適度釋放壓力。"
+        elif sdnn < 35:
             state_color = "#E74C3C" # 紅色
             recommendation = "建議多休息、進行深呼吸調節，或透過溫水浴放鬆身心。"
         elif rmssd > 50 and sdnn > 45:
             state_color = "#2980B9" # 藍色
             recommendation = "您的身體恢復狀況極佳，適合進行高強度學習或體力鍛鍊！"
-        elif sdnn < 20:
-            state_color = "#C0392B" # 深紅
-            recommendation = "警訊！您的自律神經活性偏低，請務必獲得充足睡眠並適度釋放壓力。"
 
         # 更新介面
         lbl_time.config(text=ts)
@@ -1470,15 +1470,15 @@ class ECGRealTimePlotter:
             stress_level = "正常"
             recommendation = "保持規律作息，您的自律神經調節狀況非常良好！"
  
-            if sdnn < 35:
+            if sdnn < 20:
+                stress_level = "極度疲勞 / 慢性壓力"
+                recommendation = "警訊！您的自律神經活性偏低，請務必獲得充足睡眠並適度釋放壓力。"
+            elif sdnn < 35:
                 stress_level = "高壓 / 疲勞狀態"
                 recommendation = "建議多休息、進行深呼吸調節，或透過溫水浴放鬆身心。"
             elif rmssd > 50 and sdnn > 45:
                 stress_level = "身心放鬆狀態"
                 recommendation = "您的身體恢復狀況極佳，適合進行高強度學習或體力鍛鍊！"
-            elif sdnn < 20:
-                stress_level = "極度疲勞 / 慢性壓力"
-                recommendation = "警訊！您的自律神經活性偏低，請務必獲得充足睡眠並適度釋放壓力。"
  
             # 儲存到歷史紀錄 CSV 檔案 (新增 avg_rsp 欄位)
             self.save_to_history(avg_hr, avg_rsp, sdnn, rmssd, stress_level)
@@ -1523,7 +1523,17 @@ class ECGRealTimePlotter:
                 "balance_desc": balance_desc,
                 "state": stress_level,
                 "cause": cause_desc,
-                "recommendation": recommendation
+                "recommendation": recommendation,
+                "sdnn": round(sdnn, 1),
+                "rmssd": round(rmssd, 1),
+                "sns_active": sns_active,
+                "pns_active": pns_active,
+                "pr_val": pr_val,
+                "pr_status": pr_status,
+                "qrs_val": qrs_val,
+                "qrs_status": qrs_status,
+                "qt_val": qt_val,
+                "qt_status": qt_status
             }
             self.broadcast_to_ws(self.last_result)
 

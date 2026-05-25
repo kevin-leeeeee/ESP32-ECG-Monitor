@@ -338,17 +338,52 @@ export class EcgAnalyzer {
       return { status: "無法偵測足夠心跳", hr: 0, sdnn: 0, rmssd: 0 };
     }
 
-    // 計算 RR 間隔 (單位: 毫秒)
+    // 1. 計算原始的 RR 間隔 (單位: 毫秒)
     const rrIntervals = [];
     for (let i = 1; i < peaks.length; i++) {
       const diff = peaks[i] - peaks[i - 1];
       rrIntervals.push((diff / this.sampleRate) * 1000);
     }
 
-    // 排除不合理的 RR 間隔 (例如大於 2000ms 或小於 300ms 的極端雜訊)
-    const validRR = rrIntervals.filter(rr => rr >= 300 && rr <= 2000);
-    if (validRR.length === 0) {
+    // 2. 初步排除極端不合理的 RR 間隔 (例如大於 2000ms 或小於 300ms)
+    const rawValidRR = rrIntervals.filter(rr => rr >= 300 && rr <= 2000);
+    if (rawValidRR.length < 3) {
       return { status: "無有效 RR 間隔", hr: 0, sdnn: 0, rmssd: 0 };
+    }
+
+    // 3. 計算 RR 中位數 (Median) - 中位數不易受極端雜訊干擾，適合作為基準值
+    const sortedRR = [...rawValidRR].sort((a, b) => a - b);
+    const medianRR = sortedRR[Math.floor(sortedRR.length / 2)];
+
+    // 4. Artifact Correction (人為干擾校正)：
+    // 剔除偏離中位數超過 ±25% 的異常點（如漏判的超大值或多判的極小值）
+    // 並且剔除相鄰兩下心跳變化大於 20% 的異常突變點（因手震或身體晃動產生的假性變異）
+    const validRR = [];
+    for (let i = 0; i < rawValidRR.length; i++) {
+      const rr = rawValidRR[i];
+      
+      // 檢查是否偏離中位數超過 ±25%
+      const devFromMedian = Math.abs(rr - medianRR) / medianRR;
+      if (devFromMedian > 0.25) {
+        console.log(`[Artifact Filter] 排除偏離中位數點: ${rr.toFixed(1)}ms (中位數: ${medianRR.toFixed(1)}ms)`);
+        continue;
+      }
+      
+      // 檢查是否與前一個相鄰 RR 變化大於 20%
+      if (i > 0) {
+        const prevRR = rawValidRR[i - 1];
+        const diffFromPrev = Math.abs(rr - prevRR) / prevRR;
+        if (diffFromPrev > 0.20) {
+          console.log(`[Artifact Filter] 排除相鄰突變點: ${rr.toFixed(1)}ms (前值: ${prevRR.toFixed(1)}ms, 變化: ${(diffFromPrev * 100).toFixed(1)}%)`);
+          continue;
+        }
+      }
+      
+      validRR.push(rr);
+    }
+
+    if (validRR.length < 3) {
+      return { status: "無有效 RR 間隔 (過濾後)", hr: 0, sdnn: 0, rmssd: 0 };
     }
 
     // 1. 平均心率 (BPM)
@@ -420,15 +455,15 @@ export class EcgAnalyzer {
     let stressLevel = "正常";
     let recommendation = "保持規律作息，您的自律神經調節狀況非常良好！";
 
-    if (sdnn < 35) {
+    if (sdnn < 20) {
+      stressLevel = "極度疲勞 / 慢性壓力";
+      recommendation = "警訊！您的自律神經活性偏低，請務必獲得充足睡眠並適度釋放壓力。";
+    } else if (sdnn < 35) {
       stressLevel = "高壓 / 疲勞狀態";
       recommendation = "建議多休息、進行深呼吸調節，或透過溫水浴放鬆身心。";
     } else if (rmssd > 50 && sdnn > 45) {
       stressLevel = "身心放鬆狀態";
       recommendation = "您的身體恢復狀況極佳，適合進行高強度學習或體力鍛鍊！";
-    } else if (sdnn < 20) {
-      stressLevel = "極度疲勞 / 慢性壓力";
-      recommendation = "警訊！您的自律神經活性偏低，請務必獲得充足睡眠並適度釋放壓力。";
     }
 
     let balanceDesc = "";

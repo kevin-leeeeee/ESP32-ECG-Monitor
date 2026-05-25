@@ -78,6 +78,9 @@
    * 使用手機掃描該 QR Code 下載產生的 **`.apk` 檔案** 並安裝到手機上。
    * 此時手機上會多出一個名稱為您專案名稱的客製化 App（它內部已打包了藍牙原生驅動）。
 
+> **💡 快速預覽免編譯方案 (推薦測試)**：
+> 若您不想花時間配置 EAS 帳號與執行雲端編譯，我們已將最新修復與優化（包含歷史紀錄儲存修復與異常數據濾除）後的客製化預覽版 APK 部署至本專案的 GitHub Releases。您可以直接使用 Android 手機開啟 [GitHub Release 頁面](https://github.com/kevin-leeeeee/ESP32-ECG-Monitor/releases/tag/v1.0.0-preview) 下載 `ecg-monitor-preview.apk` 並直接安裝至手機中，即可直接使用。
+
 ---
 
 ### 第三步：本地開發伺服器連線與執行
