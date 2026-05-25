@@ -28,13 +28,13 @@ from datetime import datetime
 try:
     import neurokit2 as nk
 except ImportError:
-    print("⚠️ 缺少 neurokit2 或 scipy 套件，請執行: pip install neurokit2 scipy")
+    print("缺少 neurokit2 或 scipy 套件，請執行: pip install neurokit2 scipy")
     exit()
 
 # ==========================================
 # 系統參數設定 
 # ==========================================
-SERIAL_PORT = 'COM3' # 若使用真實 ESP32 USB，設為對應 COM Port (例如 'COM3')。若使用藍牙，改為 'BLE'。模擬設為 'SIMULATE'
+SERIAL_PORT = 'AUTO' # 可設為 'AUTO' (自動偵測 USB), 'COM3' (手動指定), 'BLE' (藍牙), 'SIMULATE' (模擬)
 BAUD_RATE = 115200
 SAMPLE_RATE = 250 
 
@@ -970,7 +970,7 @@ class ECGRealTimePlotter:
         if not self.is_simulating:
             if self.is_ble:
                 if not HAS_BLEAK:
-                    print("⚠️ 缺少 bleak 套件，無法使用藍牙連線！請執行: pip install bleak")
+                    print("缺少 bleak 套件，無法使用藍牙連線！請執行: pip install bleak")
                     exit()
                 print("[藍牙] 啟動藍牙 BLE 連線模式...")
                 # 啟動 BLE 背景執行緒
@@ -994,7 +994,7 @@ class ECGRealTimePlotter:
                         time.sleep(0.05)
                         
                     if not has_data:
-                        print(f"⚠️ [連線失敗] 雖然成功開啟了 {port}，但未檢測到來自 ESP32 的數據流入。")
+                        print(f"[連線失敗] 雖然成功開啟了 {port}，但未檢測到來自 ESP32 的數據流入。")
                         print("   請確認：")
                         print("   1. ESP32 晶片已接妥並開機。")
                         print("   2. 該 COM Port 沒有被其他程式（如 Arduino IDE）佔用。")
@@ -1268,7 +1268,7 @@ class ECGRealTimePlotter:
                             print(f"[Debug] 讀取單行數據異常: {e}")
                             pass
                 except Exception as e:
-                    print(f"⚠️ [串口異常] USB 連線已斷開或丟失：{e}")
+                    print(f"[串口異常] USB 連線已斷開或丟失：{e}")
                     pass
 
         # 餵入繪圖緩衝區
@@ -1884,11 +1884,44 @@ class ECGRealTimePlotter:
             except:
                 pass
 
+def auto_detect_serial_port():
+    """ 自動掃描可用串口，優先尋找 CP210x, CH340, USB-SERIAL 等常用晶片 """
+    import serial.tools.list_ports
+    ports = list(serial.tools.list_ports.comports())
+    
+    # 1. 優先匹配常見 USB 轉串口晶片
+    for p in ports:
+        desc = p.description.upper()
+        if any(keyword in desc for keyword in ["CH340", "CP210", "USB-SERIAL", "USB SERIAL", "FTDI"]):
+            return p.device
+            
+    # 2. 如果沒有明顯的 USB 晶片描述，排除 Intel SOL 與 COM1 後，選擇第一個可用的 COM 埠
+    for p in ports:
+        desc = p.description.upper()
+        if "SOL" not in desc and p.device != "COM1":
+            return p.device
+            
+    # 3. 兜底回傳第一個可用串口
+    if ports:
+        return ports[0].device
+        
+    return None
+
 if __name__ == '__main__':
     # 啟動時先載入並列印歷史清單
     load_and_print_history()
     
-    plotter = ECGRealTimePlotter(SERIAL_PORT, BAUD_RATE, MEASUREMENT_DURATION)
+    port = SERIAL_PORT
+    if port == 'AUTO':
+        detected = auto_detect_serial_port()
+        if detected:
+            print(f"[自動偵測] 偵測到可能為 ESP32 的串口：{detected}")
+            port = detected
+        else:
+            print("[自動偵測] 未偵測到任何可用的 USB 串口，預設嘗試 COM3...")
+            port = 'COM3'
+            
+    plotter = ECGRealTimePlotter(port, BAUD_RATE, MEASUREMENT_DURATION)
     try:
         plotter.start()
     except KeyboardInterrupt:
