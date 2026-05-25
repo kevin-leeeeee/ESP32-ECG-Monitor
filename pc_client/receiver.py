@@ -34,7 +34,7 @@ except ImportError:
 # ==========================================
 # 系統參數設定 
 # ==========================================
-SERIAL_PORT = 'BLE' # 若使用藍牙，設為 'BLE'。若使用真實 ESP32 USB，改為對應 COM Port (例如 'COM3')。模擬設為 'SIMULATE'
+SERIAL_PORT = 'COM3' # 若使用真實 ESP32 USB，設為對應 COM Port (例如 'COM3')。若使用藍牙，改為 'BLE'。模擬設為 'SIMULATE'
 BAUD_RATE = 115200
 SAMPLE_RATE = 250 
 
