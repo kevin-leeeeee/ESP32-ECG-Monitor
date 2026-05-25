@@ -122,7 +122,28 @@ eas build --platform android --profile preview
   ```bash
   eas build --platform ios --profile production
   ```
-  *(⚠️ 註：iOS 正式打包需要付費的 Apple 開發者帳號配置認證憑證)*
+---
+
+### 💡 如何自訂 App 圖示與啟動畫面 (Splash Screen)
+若您需要客製化 App 在手機桌面顯示的圖示，或啟動時的封面載入畫面，可以替換以下檔案並重新打包：
+
+1. **更換 App 桌面圖示 (Icon)**：
+   - 準備一張 1024x1024 像素的 PNG 圖片，命名為 `icon.png`，替換掉 `mobile_app/assets/icon.png`。
+   - **Android 適應性圖示 (Adaptive Icon)**：
+     - 前景圖 (透明背景的主題圖案)：準備一張 512x512 PNG，命名並替換 `mobile_app/assets/android-icon-foreground.png`。
+     - 背景圖：替換 `mobile_app/assets/android-icon-background.png`；或者在 `app.json` 的 `android.adaptiveIcon.backgroundColor` 修改為自訂顏色十六進位值。
+2. **更換啟動載入畫面 (Splash Screen)**：
+   - 準備一張封面圖片（建議為 1242x2436 像素的 PNG），命名為 `splash.png` 放進 `mobile_app/assets/`。
+   - 在 `mobile_app/app.json` 的 `"expo"` 節點下新增 `splash` 欄位配置：
+     ```json
+     "splash": {
+       "image": "./assets/splash.png",
+       "resizeMode": "contain",
+       "backgroundColor": "#E6F4FE"
+     }
+     ```
+3. **重新打包生效**：
+   - 替換圖片後，請重新執行 EAS Build 打包命令（如 `eas build ...`），下載安裝新的安裝包，新的圖示與啟動封面即會生效。
 
 ---
 
